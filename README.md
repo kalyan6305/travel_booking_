@@ -1,5 +1,3 @@
-Got it ✅ — you want a **README.md** file for your GitHub project.
-Here’s a clean one tailored for your **Travel Booking Flask App**:
 
 ```markdown
 # 🌍 Travel Booking Portal
