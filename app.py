@@ -1,103 +1,108 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from flask_bcrypt import Bcrypt
-from pymongo import MongoClient
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_pymongo import PyMongo
 
 app = Flask(__name__)
-app.secret_key = "mysecretkey"
+app.secret_key = "supersecretkey"
 
-# ====== MongoDB Connection ======
-client = MongoClient("mongodb://localhost:27017/")  # Use your MongoDB Atlas URI if needed
-db = client["travel_booking"]
-users_collection = db["users"]
-messages_collection = db["messages"]   # ✅ Added for contact messages
+# MongoDB connection (local)
+app.config["MONGO_URI"] = "mongodb://localhost:27017/travelDB"
+mongo = PyMongo(app)
 
-bcrypt = Bcrypt(app)
-
-# ====== ROUTES ======
-
+# Default route - Show login first
 @app.route("/")
-def index():
-    """ Show login/signup page if not logged in """
+def root():
     if "user" in session:
         return redirect(url_for("home"))
-    return render_template("login.html")  
+    return redirect(url_for("login"))
 
-@app.route("/login", methods=["POST"])
-def login():
-    """ Login user """
-    username = request.form["username"]
-    password = request.form["password"]
-
-    user = users_collection.find_one({"username": username})
-    if user and bcrypt.check_password_hash(user["password"], password):
-        session["user"] = username
-        flash("Login successful!", "success")
-        return redirect(url_for("home"))
-    else:
-        flash("Invalid username or password", "danger")
-        return redirect(url_for("index"))
-
-@app.route("/signup", methods=["POST"])
-def signup():
-    """ Register new user """
-    username = request.form["username"]
-    email = request.form["email"]
-    password = request.form["password"]
-
-    existing_user = users_collection.find_one({"username": username})
-    if existing_user:
-        flash("⚠️ Username already exists, choose another!", "warning")
-        return redirect(url_for("index"))
-    else:
-        hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
-        users_collection.insert_one({
-            "username": username,
-            "email": email,
-            "password": hashed_password
-        })
-        flash("✅ Signup successful! Please login.", "success")
-        return redirect(url_for("index"))
-
+# Homepage (after login)
 @app.route("/home")
 def home():
-    """ Main booking page """
-    if "user" not in session:
-        flash("⚠️ Please login first!", "danger")
-        return redirect(url_for("index"))
-    return render_template("index.html", username=session["user"])
+    if "user" in session:
+        return render_template("index.html")
+    else:
+        flash("⚠️ Please login first!", "warning")
+        return redirect(url_for("login"))
 
+# About page
 @app.route("/about")
 def about():
-    """ About page """
-    return render_template("about.html")
+    if "user" in session:
+        return render_template("about.html")
+    else:
+        flash("⚠️ Please login first!", "warning")
+        return redirect(url_for("login"))
 
+# Contact page
 @app.route("/contact", methods=["GET", "POST"])
 def contact():
-    """ Contact page with MongoDB storage """
+    if "user" not in session:
+        flash("⚠️ Please login first!", "warning")
+        return redirect(url_for("login"))
+
     if request.method == "POST":
         name = request.form["name"]
         email = request.form["email"]
         message = request.form["message"]
 
-        # ✅ Save the message in MongoDB
-        messages_collection.insert_one({
+        mongo.db.contacts.insert_one({
             "name": name,
             "email": email,
             "message": message
         })
 
-        flash("✅ Your message has been submitted successfully!", "success")
+        flash("✅ Your message has been sent successfully!", "success")
         return redirect(url_for("contact"))
 
     return render_template("contact.html")
 
+# Register (Signup)
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
+        existing_user = mongo.db.users.find_one({"username": username})
+        if existing_user:
+            flash("⚠️ Username already exists. Try another.", "danger")
+            return redirect(url_for("signup"))
+
+        mongo.db.users.insert_one({
+            "username": username,
+            "password": password
+        })
+
+        flash("✅ Registration successful! Please login.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("sinup.html")
+
+# Login
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
+        user = mongo.db.users.find_one({"username": username, "password": password})
+
+        if user:
+            session["user"] = username
+            flash(f"✅ Welcome {username}, you are now logged in.", "success")
+            return redirect(url_for("home"))
+        else:
+            flash("❌ Invalid username or password.", "danger")
+            return redirect(url_for("login"))
+
+    return render_template("login.html")
+
+# Logout
 @app.route("/logout")
 def logout():
-    """ Logout user """
     session.pop("user", None)
-    flash("You have been logged out.", "info")
-    return redirect(url_for("index"))
+    flash("✅ You have been logged out.", "success")
+    return redirect(url_for("login"))
 
-# ====== MAIN ======
 if __name__ == "__main__":
     app.run(debug=True)

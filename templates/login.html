@@ -2,47 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login / Signup</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='./style.css') }}">
+  <title>Login | Travel Booking</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="auth-page">  <!-- Add this class -->
-
-  <div class="auth-container">
-    <!-- Login Form -->
-    <div class="form-box active" id="login-box">
-      <h2>Login</h2>
-      <form action="/login" method="POST">
-        <input type="text" name="username" placeholder="Enter Username" required>
-        <input type="password" name="password" placeholder="Enter Password" required>
-        <button type="submit">Login</button>
-        <p>Don't have an account? <a onclick="showSignup()">Register here</a></p>
-      </form>
-    </div>
-
-    <!-- Signup Form -->
-    <div class="form-box" id="signup-box">
-      <h2>Signup</h2>
-      <form action="/signup" method="POST">
-        <input type="text" name="username" placeholder="Choose Username" required>
-        <input type="email" name="email" placeholder="Enter Email" required>
-        <input type="password" name="password" placeholder="Create Password" required>
-        <button type="submit">Register</button>
-        <p>Already have an account? <a onclick="showLogin()">Login here</a></p>
-      </form>
-    </div>
+<body class="login-page">
+  <div class="login-container">
+    <h2>Login</h2>
+    <form method="POST">
+      <input type="text" name="username" placeholder="Enter Username" required>
+      <input type="password" name="password" placeholder="Enter Password" required>
+      <button type="submit">Login</button>
+    </form>
+    <p>Don’t have an account? <a href="{{ url_for('signup') }}">Register here</a></p>
   </div>
-
-  <script>
-    function showSignup() {
-      document.getElementById("login-box").classList.remove("active");
-      document.getElementById("signup-box").classList.add("active");
-    }
-    function showLogin() {
-      document.getElementById("signup-box").classList.remove("active");
-      document.getElementById("login-box").classList.add("active");
-    }
-  </script>
-
 </body>
+
 </html>
